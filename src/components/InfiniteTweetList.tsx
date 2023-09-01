@@ -4,6 +4,8 @@ import { useSession } from "next-auth/react";
 import { VscHeartFilled, VscHeart } from "react-icons/vsc";
 
 import ProfileImage from "./ProfileImage";
+import IconHoverEffect from "./IconHoverEffect";
+import { api } from "~/utils/api";
 
 type Tweet = {
   id: string;
@@ -66,6 +68,44 @@ function TweetCard({
   likeCount,
   likedByMe,
 }: Tweet) {
+  const trpcUtils = api.useContext();
+  const toggleLike = api.tweet.toggleLike.useMutation({
+    onSuccess: ({ addedLike }) => {
+      const updateData: Parameters<
+        typeof trpcUtils.tweet.infiniteFeed.setInfiniteData
+      >[1] = (oldData) => {
+        if (oldData == null) return;
+
+        const countModifier = addedLike ? 1 : -1;
+
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page) => {
+            return {
+              ...page,
+              tweets: page.tweets.map((tweet) => {
+                if (tweet.id === id) {
+                  return {
+                    ...tweet,
+                    likeCount: tweet.likeCount + countModifier,
+                    likedByMe: addedLike,
+                  };
+                }
+
+                return tweet;
+              }),
+            };
+          }),
+        };
+      };
+      trpcUtils.tweet.infiniteFeed.setInfiniteData({}, updateData);
+    },
+  });
+
+  const handleToggleLike = () => {
+    toggleLike.mutate({ id });
+  };
+
   return (
     <li className="flex gap-4 border-b p-4">
       <Link href={`/profiles/${user.id}`}>
@@ -85,7 +125,12 @@ function TweetCard({
           </span>
         </div>
         <p className="whitespace-pre-wrap">{content}</p>
-        <HeartButton likedByMe={likedByMe} likeCount={likeCount} />
+        <HeartButton
+          likedByMe={likedByMe}
+          likeCount={likeCount}
+          onClick={handleToggleLike}
+          isLoading={toggleLike.isLoading}
+        />
       </div>
     </li>
   );
@@ -94,9 +139,16 @@ function TweetCard({
 type HeartButtonProps = {
   likedByMe: boolean;
   likeCount: number;
+  isLoading: boolean;
+  onClick: () => void;
 };
 
-function HeartButton({ likedByMe, likeCount }: HeartButtonProps) {
+function HeartButton({
+  likedByMe,
+  likeCount,
+  isLoading,
+  onClick,
+}: HeartButtonProps) {
   const session = useSession();
 
   const HeartIcon = likedByMe ? VscHeartFilled : VscHeart;
@@ -112,19 +164,23 @@ function HeartButton({ likedByMe, likeCount }: HeartButtonProps) {
 
   return (
     <button
-      className={`group flex items-center gap-1 self-start transition-colors duration-200 ${
+      disabled={isLoading}
+      onClick={onClick}
+      className={`group -ml-2 flex items-center gap-1 self-start transition-colors duration-200 ${
         likedByMe
           ? "text-red-500"
           : "text-gray-500 hover:text-red-500 focus-visible:text-red-500"
       }`}
     >
-      <HeartIcon
-        className={`transition-colors duration-200 ${
-          likedByMe
-            ? "fill-red-500"
-            : "fill-gray-500 group-hover:fill-red-500 group-focus-visible:fill-red-500"
-        }`}
-      />
+      <IconHoverEffect red>
+        <HeartIcon
+          className={`transition-colors duration-200 ${
+            likedByMe
+              ? "fill-red-500"
+              : "fill-gray-500 group-hover:fill-red-500 group-focus-visible:fill-red-500"
+          }`}
+        />
+      </IconHoverEffect>
       <span>{likeCount}</span>
     </button>
   );
