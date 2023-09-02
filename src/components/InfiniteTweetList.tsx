@@ -6,6 +6,7 @@ import { VscHeartFilled, VscHeart } from "react-icons/vsc";
 import ProfileImage from "./ProfileImage";
 import IconHoverEffect from "./IconHoverEffect";
 import { api } from "~/utils/api";
+import LoadingSpinner from "./LoadingSpinner";
 
 type Tweet = {
   id: string;
@@ -31,7 +32,12 @@ export default function InfiniteTweetList({
   hasMore = false,
   fetchNewTweets,
 }: InfiniteTweetListProps) {
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading)
+    return (
+      <div>
+        <LoadingSpinner />
+      </div>
+    );
   if (isError) return <div>Error...</div>;
   if (tweets == null) return null;
 
@@ -46,7 +52,11 @@ export default function InfiniteTweetList({
         dataLength={tweets.length}
         next={fetchNewTweets}
         hasMore={hasMore}
-        loader={<h4>Loading...</h4>}
+        loader={
+          <h4>
+            <LoadingSpinner />
+          </h4>
+        }
       >
         {tweets.map((tweet) => {
           return <TweetCard key={tweet.id} {...tweet} />;
