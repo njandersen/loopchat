@@ -35,7 +35,7 @@ const ProfilePage: NextPage<InferGetStaticPropsType<typeof getStaticProps>> = ({
         const countModifier = addedFollow ? 1 : -1;
         return {
           ...oldData,
-          isFollowing: addedFollow,
+          isFollowing: addedFollow ?? false,
           followerCount: oldData.followerCount + countModifier,
         };
       });
